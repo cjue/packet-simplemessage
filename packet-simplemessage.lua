@@ -53,6 +53,11 @@ do
 	local MSG_READ_INPUT                 = 0x14
 	local MSG_WRITE_OUTPUT               = 0x15
 
+	-- TODO: update when REP-I0004 is updated
+	local MSG_DYNAMIC_JOINT_POINT        = 0xFDE9
+	local MSG_DYNAMIC_JOINT_STATE        = 0xFDEA
+	local MSG_DYNAMIC_GROUP_STATUS       = 0xFDEB
+
 	local MSG_MOTO_BEGIN                 = 0x7D0
 	local MSG_MOTO_MOTION_CTRL           = 0x7D1
 	local MSG_MOTO_MOTION_REPLY          = 0x7D2
@@ -82,6 +87,13 @@ do
 	local VALID_FIELD_TYPE_POSITION      = 0x02
 	local VALID_FIELD_TYPE_VELOCITY      = 0x04
 	local VALID_FIELD_TYPE_ACCELERATION  = 0x08
+
+	-- TODO: this is not actually defined yet
+	local VALID_FIELD_REP_I0001_TYPE_POSITION      = 0x01
+	local VALID_FIELD_REP_I0001_TYPE_VELOCITY      = 0x02
+	local VALID_FIELD_REP_I0001_TYPE_ACCELERATION  = 0x04
+	local VALID_FIELD_REP_I0001_TYPE_EFFORT        = 0x08
+	local VALID_FIELD_REP_I0001_TYPE_TIME          = 0x10
 
 	local STATUS_ROBOTMODE_UNKNOWN       = -1
 	local STATUS_ROBOTMODE_MANUAL        =  1
@@ -193,6 +205,10 @@ do
 		[MSG_READ_INPUT                ] = "Read Input",
 		[MSG_WRITE_OUTPUT              ] = "Write Output",
 
+		[MSG_DYNAMIC_JOINT_POINT       ] = "Dynamic Joint Point (Proj. Specific)",
+		[MSG_DYNAMIC_JOINT_STATE       ] = "Dynamic Joint State (Proj. Specific)",
+		[MSG_DYNAMIC_GROUP_STATUS      ] = "Dynamic Group Status (Proj. Specific)",
+
 		[MSG_MOTO_BEGIN                ] = "Motoman Msg Begin (BUG)",
 		[MSG_MOTO_MOTION_CTRL          ] = "Motoman Motion Ctrl",
 		[MSG_MOTO_MOTION_REPLY         ] = "Motoman Motion Reply",
@@ -202,6 +218,7 @@ do
 		[MSG_MOTO_WRITE_SINGLE_IO_REPLY] = "Motoman Write Single IO Reply",
 		[MSG_MOTO_JOINT_TRAJ_PT_FULL_EX] = "Motoman Joint Trajectory Point Full Extended",
 		[MSG_MOTO_JOINT_FEEDBACK_EX    ] = "Motoman Joint Feedback Extended",
+
 		-- facilitate dissection of legacy captures (before renumbering of
 		-- Motoman msgs). See packet-simplemessage issue 12.
 		-- TODO: this will need to be removed once IDs 0x10 and 0x11 are
@@ -235,6 +252,14 @@ do
 		[VALID_FIELD_TYPE_POSITION    ] = "Position",
 		[VALID_FIELD_TYPE_VELOCITY    ] = "Velocity",
 		[VALID_FIELD_TYPE_ACCELERATION] = "Acceleration"
+	}
+
+	local valid_field_rep_i0001_type_str = {
+		[VALID_FIELD_REP_I0001_TYPE_POSITION    ] = "Position",
+		[VALID_FIELD_REP_I0001_TYPE_VELOCITY    ] = "Velocity",
+		[VALID_FIELD_REP_I0001_TYPE_ACCELERATION] = "Acceleration",
+		[VALID_FIELD_REP_I0001_TYPE_EFFORT      ] = "Effort",
+		[VALID_FIELD_REP_I0001_TYPE_TIME        ] = "Time"
 	}
 
 	local status_robotmode_str = {
@@ -368,6 +393,43 @@ do
 	f.jf_vf_vel   = ProtoField.uint8("simplemessage.jf.vf.vel"  , "Velocity     "  , base.DEC, in_valid_str, VALID_FIELD_TYPE_VELOCITY    , "Validity of velocity data")
 	f.jf_vf_accel = ProtoField.uint8("simplemessage.jf.vf.accel", "Acceleration "  , base.DEC, in_valid_str, VALID_FIELD_TYPE_ACCELERATION, "Validity of acceleration data")
 	f.jf_time     = ProtoField.float("simplemessage.jf.time"    , "Time"           , "Timestamp for data (seconds, optional)")
+
+	-- protocol fields: DYNAMIC_JOINT_POINT
+	f.djpt_seq_nr    = ProtoField.int32 ("simplemessage.djpt.seq"            , "Sequence Number" , base.DEC, nil          , nil                          , "Index of point in trajectory")
+	f.djpt_numgroups = ProtoField.uint32("simplemessage.djpt.numgroups"      , "Number of Groups", base.DEC, nil          , nil                          , "Number of groups")
+	f.djpt_groupid   = ProtoField.int32 ("simplemessage.djpt.gid"            , "Group ID"        , base.DEC, nil          , nil                          , "Control-group ID for use on controller")
+	f.djpt_numjoints = ProtoField.uint32("simplemessage.djpt.numjoints"      , "Number of Joints", base.DEC, nil          , nil                          , "Number of joints in group")
+	f.djpt_vf        = ProtoField.uint8 ("simplemessage.djpt.vf"             , "Valid Fields"    , base.HEX, nil          , nil                          , "Fields that contain valid data")
+	f.djpt_vf_pos    = ProtoField.uint8 ("simplemessage.djpt.vf.pos"         , "Position     "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_POSITION    , "Validity of position data")
+	f.djpt_vf_vel    = ProtoField.uint8 ("simplemessage.djpt.vf.vel"         , "Velocity     "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_VELOCITY    , "Validity of velocity data")
+	f.djpt_vf_accel  = ProtoField.uint8 ("simplemessage.djpt.vf.accel"       , "Acceleration "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_ACCELERATION, "Validity of acceleration data")
+	f.djpt_vf_effort = ProtoField.uint8 ("simplemessage.djpt.vf.effort"      , "Effort       "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_EFFORT      , "Validity of effort data")
+	f.djpt_vf_time   = ProtoField.uint8 ("simplemessage.djpt.vf.time"        , "Time         "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_TIME        , "Validity of time field")
+	f.djpt_t_fstart  = ProtoField.float ("simplemessage.djpt.time_from_start", "Time from start" , "TODO (seconds)")
+
+	-- protocol fields: DYNAMIC_JOINT_STATE
+	f.djst_seq_nr    = ProtoField.int32 ("simplemessage.djst.seq"            , "Sequence Number" , base.DEC, nil          , nil                          , "Index of point in trajectory")
+	f.djst_numgroups = ProtoField.uint32("simplemessage.djst.numgroups"      , "Number of Groups", base.DEC, nil          , nil                          , "Number of groups")
+	f.djst_groupid   = ProtoField.int32 ("simplemessage.djst.gid"            , "Group ID"        , base.DEC, nil          , nil                          , "Control-group ID for use on controller")
+	f.djst_numjoints = ProtoField.uint32("simplemessage.djst.numjoints"      , "Number of Joints", base.DEC, nil          , nil                          , "Number of joints in group")
+	f.djst_vf        = ProtoField.uint8 ("simplemessage.djst.vf"             , "Valid Fields"    , base.HEX, nil          , nil                          , "Fields that contain valid data")
+	f.djst_vf_pos    = ProtoField.uint8 ("simplemessage.djst.vf.pos"         , "Position     "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_POSITION    , "Validity of position data")
+	f.djst_vf_vel    = ProtoField.uint8 ("simplemessage.djst.vf.vel"         , "Velocity     "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_VELOCITY    , "Validity of velocity data")
+	f.djst_vf_accel  = ProtoField.uint8 ("simplemessage.djst.vf.accel"       , "Acceleration "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_ACCELERATION, "Validity of acceleration data")
+	f.djst_vf_effort = ProtoField.uint8 ("simplemessage.djst.vf.effort"      , "Effort       "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_EFFORT      , "Validity of effort data")
+	f.djst_vf_time   = ProtoField.uint8 ("simplemessage.djst.vf.time"        , "Time         "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_TIME        , "Validity of time field")
+	-- TODO: add all 'desired' and 'error' fields
+
+	-- protocol fields: DYNAMIC_GROUP_STATE
+	f.dgst_numgroups = ProtoField.uint32("simplemessage.dgst.numgroups"      , "Number of Groups", base.DEC, nil                 , nil, "Number of groups")
+	f.dgst_groupid   = ProtoField.int32 ("simplemessage.dgst.gid"            , "Group ID"        , base.DEC, nil                 , nil, "Control-group ID for use on controller")
+	f.dgst_mode      = ProtoField.int32 ("simplemessage.dgst.mode"           , "Mode           " , base.DEC, status_robotmode_str, nil, "Mode the controller is currently in")
+	f.dgst_estop     = ProtoField.int32 ("simplemessage.dgst.e_stopped"      , "E-Stopped      " , base.DEC, status_tristate_str , nil, "Status of the e-stop on the controller")
+	f.dgst_drv_pwd   = ProtoField.int32 ("simplemessage.dgst.drives_powered" , "Drives Powered " , base.DEC, status_tristate_str , nil, "Status of servo power")
+	f.dgst_motpos    = ProtoField.int32 ("simplemessage.dgst.motion_possible", "Motion Possible" , base.DEC, status_tristate_str , nil, "Controller is ok to receive motion commands")
+	f.dgst_inmot     = ProtoField.int32 ("simplemessage.dgst.in_motion"      , "In Motion      " , base.DEC, status_tristate_str , nil, "Robot is currently executing a command")
+	f.dgst_inerr     = ProtoField.int32 ("simplemessage.dgst.in_error"       , "In Error       " , base.DEC, status_tristate_str , nil, "Controller in error mode")
+	f.dgst_errcode   = ProtoField.int32 ("simplemessage.dgst.error_code"     , "Error Code     " , base.DEC, nil                 , nil, "If not zero: error code (controller specific)")
 
 	-- protocol fields: MOTO_MOTION_CTRL
 	f.mmc_robotid = ProtoField.int32("simplemessage.mmc.rid"     , "Robot ID"       , base.DEC, nil                 , nil, "Robot identifier")
@@ -863,6 +925,280 @@ do
 
 
 	--
+	-- DYNAMIC_JOINT_POINT
+	--
+	local function disf_dynamic_joint_point(buf, pkt, tree, offset)
+		--
+		local offset_ = offset
+		local lt = tree
+
+		-- header
+		offset_ = offset_ + disf_header(buf, pkt, tree, offset_)
+
+		-- body
+		local body_tree = lt:add(buf(offset_, 0), "Body")
+		local body_offset = offset_
+
+		-- sequence number
+		pref_tree_add(body_tree, f.djpt_seq_nr, buf, offset_, 4)
+		offset_ = offset_ + 4
+
+		-- number of groups
+		local num_groups = pref_uint(buf, offset_, 4)
+		pref_tree_add(body_tree, f.djpt_numgroups, buf, offset_, 4)
+		offset_ = offset_ + 4
+
+		-- start of group[] data
+		for i = 0, (num_groups - 1) do
+			--
+			local group_tree_start = offset_
+			local group_tree = body_tree:add(buf(offset_, 0), _F("Group %d", i))
+
+			-- group id
+			pref_tree_add(group_tree, f.djpt_groupid, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- number of joints
+			local num_joints = pref_uint(buf, offset_, 4)
+			pref_tree_add(group_tree, f.djpt_numjoints, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- valid_fields
+			local valid_fields = pref_uint(buf, offset_, 4)
+			local vf_lo = pref_tree_add(group_tree, f.djpt_vf, buf, offset_, 4)
+			-- bitfield
+			pref_tree_add(vf_lo, f.djpt_vf_pos   , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djpt_vf_vel   , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djpt_vf_accel , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djpt_vf_effort, buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djpt_vf_time  , buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- append high bit flags to bitfield parent item
+			vf_lo:append_text(_F(" (%s)", stringify_flagbits(valid_fields, valid_field_rep_i0001_type_str)))
+
+			-- positions
+			if (bit.band(VALID_FIELD_REP_I0001_TYPE_POSITION, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					"Positions", "J%d")
+			end
+
+			-- velocities
+			if (bit.band(VALID_FIELD_REP_I0001_TYPE_VELOCITY, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					"Velocities", "J%d")
+			end
+
+			-- accelerations
+			if (bit.band(VALID_FIELD_REP_I0001_TYPE_ACCELERATION, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					"Accelerations", "J%d")
+			end
+
+			-- effort
+			if (bit.band(VALID_FIELD_REP_I0001_TYPE_EFFORT, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					"Effort", "J%d")
+			end
+
+			-- time from start
+			-- TODO: is this optional?
+			local num_joints = pref_uint(buf, offset_, 4)
+			pref_tree_add(group_tree, f.djpt_t_fstart, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+
+			-- correct length of TreeItem
+			group_tree:set_len(offset_ - group_tree_start)
+		end
+
+		-- nr of bytes we consumed
+		local tlen = offset_ - body_offset
+		body_tree:set_len(tlen)
+		return (tlen)
+	end
+
+
+
+	--
+	-- DYNAMIC_JOINT_STATE
+	--
+	local function disf_dynamic_joint_state(buf, pkt, tree, offset)
+		--
+		local offset_ = offset
+		local lt = tree
+
+		-- header
+		offset_ = offset_ + disf_header(buf, pkt, tree, offset_)
+
+		-- body
+		local body_tree = lt:add(buf(offset_, 0), "Body")
+		local body_offset = offset_
+
+		-- sequence number
+		pref_tree_add(body_tree, f.djst_seq_nr, buf, offset_, 4)
+		offset_ = offset_ + 4
+
+		-- number of groups
+		local num_groups = pref_uint(buf, offset_, 4)
+		pref_tree_add(body_tree, f.djst_numgroups, buf, offset_, 4)
+		offset_ = offset_ + 4
+
+		-- start of group[] data
+		for i = 0, (num_groups - 1) do
+			--
+			local group_tree_start = offset_
+			local group_tree = body_tree:add(buf(offset_, 0), _F("Group %d", i))
+
+			-- group id
+			pref_tree_add(group_tree, f.djst_groupid, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- number of joints
+			local num_joints = pref_uint(buf, offset_, 4)
+			pref_tree_add(group_tree, f.djst_numjoints, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- valid_fields
+			local valid_fields = pref_uint(buf, offset_, 4)
+			local vf_lo = pref_tree_add(group_tree, f.djst_vf, buf, offset_, 4)
+			-- bitfield
+			pref_tree_add(vf_lo, f.djst_vf_pos   , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_vel   , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_accel , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_effort, buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_time  , buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- append high bit flags to bitfield parent item
+			vf_lo:append_text(_F(" (%s)", stringify_flagbits(valid_fields, valid_field_rep_i0001_type_str)))
+
+			-- positions
+			if (bit.band(VALID_FIELD_REP_I0001_TYPE_POSITION, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					"Positions", "J%d")
+			end
+
+			-- velocities
+			if (bit.band(VALID_FIELD_REP_I0001_TYPE_VELOCITY, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					"Velocities", "J%d")
+			end
+
+			-- accelerations
+			if (bit.band(VALID_FIELD_REP_I0001_TYPE_ACCELERATION, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					"Accelerations", "J%d")
+			end
+
+			-- effort
+			if (bit.band(VALID_FIELD_REP_I0001_TYPE_EFFORT, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					"Effort", "J%d")
+			end
+
+
+
+			-- TODO: add all 'desired' and 'error' arrays
+			-- position_desired[]
+			-- position_error[]
+			-- velocity_desired[]
+			-- velocity_error[]
+			-- accel_desired[]
+			-- accel_error[]
+			-- effort_desired[]
+			-- effort_error[]
+
+
+
+			-- correct length of TreeItem
+			group_tree:set_len(offset_ - group_tree_start)
+		end
+
+		-- nr of bytes we consumed
+		local tlen = offset_ - body_offset
+		body_tree:set_len(tlen)
+		return (tlen)
+	end
+
+
+
+
+	--
+	-- DYNAMIC_GROUP_STATUS
+	--
+	local function disf_dynamic_group_status(buf, pkt, tree, offset)
+		--
+		local offset_ = offset
+		local lt = tree
+
+		-- header
+		offset_ = offset_ + disf_header(buf, pkt, tree, offset_)
+
+		-- body
+		local body_tree = lt:add(buf(offset_, 0), "Body")
+		local body_offset = offset_
+
+		-- number of groups
+		local num_groups = pref_uint(buf, offset_, 4)
+		pref_tree_add(body_tree, f.dgst_numgroups, buf, offset_, 4)
+		offset_ = offset_ + 4
+
+		-- start of group[] data
+		for i = 0, (num_groups - 1) do
+			--
+			local group_tree_start = offset_
+			local group_tree = body_tree:add(buf(offset_, 0), _F("Group %d", i))
+
+			-- group id
+			pref_tree_add(group_tree, f.dgst_groupid, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- booleans: for now: keep order as it is in RobotStatus msg, but
+			--           update when / if needed
+			-- drives powered
+			pref_tree_add(group_tree, f.dgst_drv_pwd, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- e-stopped
+			pref_tree_add(group_tree, f.dgst_estop, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- error code
+			pref_tree_add(group_tree, f.dgst_errcode, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- in error
+			pref_tree_add(group_tree, f.dgst_inerr, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- in motion
+			pref_tree_add(group_tree, f.dgst_inmot, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- mode
+			pref_tree_add(group_tree, f.dgst_mode, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+			-- motion possible
+			pref_tree_add(group_tree, f.dgst_motpos, buf, offset_, 4)
+			offset_ = offset_ + 4
+
+
+			-- correct length of TreeItem
+			group_tree:set_len(offset_ - group_tree_start)
+		end
+
+		-- nr of bytes we consumed
+		local tlen = offset_ - body_offset
+		body_tree:set_len(tlen)
+		return (tlen)
+	end
+
+
+
+
+	--
 	-- MOTO_MOTION_CTRL
 	--
 	local function disf_motoman_ctrl(buf, pkt, tree, offset)
@@ -1280,6 +1616,10 @@ do
 		[MSG_JOINT_TRAJ_PT_FULL        ] = disf_joint_traj_point_full,
 		[MSG_JOINT_FEEDBACK            ] = disf_joint_feedback,
 
+		[MSG_DYNAMIC_JOINT_POINT       ] = disf_dynamic_joint_point,
+		[MSG_DYNAMIC_JOINT_STATE       ] = disf_dynamic_joint_state,
+		[MSG_DYNAMIC_GROUP_STATUS      ] = disf_dynamic_group_status,
+
 		[MSG_MOTO_MOTION_CTRL          ] = disf_motoman_ctrl,
 		[MSG_MOTO_MOTION_REPLY         ] = disf_motoman_reply,
 		[MSG_MOTO_READ_SINGLE_IO       ] = disf_moto_read_single_io,
@@ -1288,6 +1628,7 @@ do
 		[MSG_MOTO_WRITE_SINGLE_IO_REPLY] = disf_moto_write_single_io_reply,
 		[MSG_MOTO_JOINT_TRAJ_PT_FULL_EX] = disf_moto_joint_traj_point_full_ex,
 		[MSG_MOTO_JOINT_FEEDBACK_EX    ] = disf_moto_joint_feedback_ex,
+
 		-- facilitate dissection of legacy captures (before renumbering of
 		-- Motoman msgs)
 		-- TODO: this will need to be removed once IDs 0x10 and 0x11 are
