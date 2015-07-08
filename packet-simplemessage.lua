@@ -88,13 +88,6 @@ do
 	local VALID_FIELD_TYPE_VELOCITY      = 0x04
 	local VALID_FIELD_TYPE_ACCELERATION  = 0x08
 
-	-- TODO: this is not actually defined yet
-	local VALID_FIELD_REP_I0001_TYPE_POSITION      = 0x01
-	local VALID_FIELD_REP_I0001_TYPE_VELOCITY      = 0x02
-	local VALID_FIELD_REP_I0001_TYPE_ACCELERATION  = 0x04
-	local VALID_FIELD_REP_I0001_TYPE_EFFORT        = 0x08
-	local VALID_FIELD_REP_I0001_TYPE_TIME          = 0x10
-
 	local STATUS_ROBOTMODE_UNKNOWN       = -1
 	local STATUS_ROBOTMODE_MANUAL        =  1
 	local STATUS_ROBOTMODE_AUTO          =  2
@@ -104,6 +97,26 @@ do
 	local STATUS_TRISTATE_FALSE          =  0
 	local STATUS_TRISTATE_ON             =  1
 	local STATUS_TRISTATE_TRUE           =  1
+
+	-- TODO: this is not actually defined anywhere yet
+	local DYNJPT_VF_POSITION             = 0x01
+	local DYNJPT_VF_VELOCITY             = 0x02
+	local DYNJPT_VF_ACCELERATION         = 0x04
+	local DYNJPT_VF_EFFORT               = 0x08
+	local DYNJPT_VF_TIME                 = 0x10
+
+	local DYNJS_VF_POSITION              = 0x001
+	local DYNJS_VF_VELOCITY              = 0x002
+	local DYNJS_VF_ACCELERATION          = 0x004
+	local DYNJS_VF_EFFORT                = 0x008
+	local DYNJS_VF_POSITION_DESIRED      = 0x010
+	local DYNJS_VF_POSITION_ERROR        = 0x020
+	local DYNJS_VF_VELOCITY_DESIRED      = 0x040
+	local DYNJS_VF_VELOCITY_ERROR        = 0x080
+	local DYNJS_VF_ACCELERATION_DESIRED  = 0x100
+	local DYNJS_VF_ACCELERATION_ERROR    = 0x200
+	local DYNJS_VF_EFFORT_DESIRED        = 0x400
+	local DYNJS_VF_EFFORT_ERROR          = 0x800
 
 
 	local MOTO_MOTION_CTRL_CMD_UNDEFINED                      = 0
@@ -254,12 +267,27 @@ do
 		[VALID_FIELD_TYPE_ACCELERATION] = "Acceleration"
 	}
 
-	local valid_field_rep_i0001_type_str = {
-		[VALID_FIELD_REP_I0001_TYPE_POSITION    ] = "Position",
-		[VALID_FIELD_REP_I0001_TYPE_VELOCITY    ] = "Velocity",
-		[VALID_FIELD_REP_I0001_TYPE_ACCELERATION] = "Acceleration",
-		[VALID_FIELD_REP_I0001_TYPE_EFFORT      ] = "Effort",
-		[VALID_FIELD_REP_I0001_TYPE_TIME        ] = "Time"
+	local valid_field_type_dynjp_str = {
+		[DYNJPT_VF_POSITION    ] = "Position",
+		[DYNJPT_VF_VELOCITY    ] = "Velocity",
+		[DYNJPT_VF_ACCELERATION] = "Acceleration",
+		[DYNJPT_VF_EFFORT      ] = "Effort",
+		[DYNJPT_VF_TIME        ] = "Time"
+	}
+
+	local valid_field_type_dynjs_str = {
+		[DYNJS_VF_POSITION            ] = "Position",
+		[DYNJS_VF_VELOCITY            ] = "Velocity",
+		[DYNJS_VF_ACCELERATION        ] = "Acceleration",
+		[DYNJS_VF_EFFORT              ] = "Effort",
+		[DYNJS_VF_POSITION_DESIRED    ] = "Pos. Desired",
+		[DYNJS_VF_POSITION_ERROR      ] = "Pos. Error",
+		[DYNJS_VF_VELOCITY_DESIRED    ] = "Vel. Desired",
+		[DYNJS_VF_VELOCITY_ERROR      ] = "Vel. Error",
+		[DYNJS_VF_ACCELERATION_DESIRED] = "Acc. Desired",
+		[DYNJS_VF_ACCELERATION_ERROR  ] = "Acc. Error",
+		[DYNJS_VF_EFFORT_DESIRED      ] = "Effort Desired",
+		[DYNJS_VF_EFFORT_ERROR        ] = "Effort Error"
 	}
 
 	local status_robotmode_str = {
@@ -395,30 +423,37 @@ do
 	f.jf_time     = ProtoField.float("simplemessage.jf.time"    , "Time"           , "Timestamp for data (seconds, optional)")
 
 	-- protocol fields: DYNAMIC_JOINT_POINT
-	f.djpt_seq_nr    = ProtoField.int32 ("simplemessage.djpt.seq"            , "Sequence Number" , base.DEC, nil          , nil                          , "Index of point in trajectory")
-	f.djpt_numgroups = ProtoField.uint32("simplemessage.djpt.numgroups"      , "Number of Groups", base.DEC, nil          , nil                          , "Number of groups")
-	f.djpt_groupid   = ProtoField.int32 ("simplemessage.djpt.gid"            , "Group ID"        , base.DEC, nil          , nil                          , "Control-group ID for use on controller")
-	f.djpt_numjoints = ProtoField.uint32("simplemessage.djpt.numjoints"      , "Number of Joints", base.DEC, nil          , nil                          , "Number of joints in group")
-	f.djpt_vf        = ProtoField.uint8 ("simplemessage.djpt.vf"             , "Valid Fields"    , base.HEX, nil          , nil                          , "Fields that contain valid data")
-	f.djpt_vf_pos    = ProtoField.uint8 ("simplemessage.djpt.vf.pos"         , "Position     "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_POSITION    , "Validity of position data")
-	f.djpt_vf_vel    = ProtoField.uint8 ("simplemessage.djpt.vf.vel"         , "Velocity     "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_VELOCITY    , "Validity of velocity data")
-	f.djpt_vf_accel  = ProtoField.uint8 ("simplemessage.djpt.vf.accel"       , "Acceleration "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_ACCELERATION, "Validity of acceleration data")
-	f.djpt_vf_effort = ProtoField.uint8 ("simplemessage.djpt.vf.effort"      , "Effort       "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_EFFORT      , "Validity of effort data")
-	f.djpt_vf_time   = ProtoField.uint8 ("simplemessage.djpt.vf.time"        , "Time         "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_TIME        , "Validity of time field")
+	f.djpt_seq_nr    = ProtoField.int32 ("simplemessage.djpt.seq"            , "Sequence Number" , base.DEC, nil          , nil                   , "Index of point in trajectory")
+	f.djpt_numgroups = ProtoField.uint32("simplemessage.djpt.numgroups"      , "Number of Groups", base.DEC, nil          , nil                   , "Number of groups")
+	f.djpt_groupid   = ProtoField.int32 ("simplemessage.djpt.gid"            , "Group ID"        , base.DEC, nil          , nil                   , "Control-group ID for use on controller")
+	f.djpt_numjoints = ProtoField.uint32("simplemessage.djpt.numjoints"      , "Number of Joints", base.DEC, nil          , nil                   , "Number of joints in group")
+	f.djpt_vf        = ProtoField.uint8 ("simplemessage.djpt.vf"             , "Valid Fields"    , base.HEX, nil          , nil                   , "Fields that contain valid data")
+	f.djpt_vf_pos    = ProtoField.uint8 ("simplemessage.djpt.vf.pos"         , "Position     "   , base.DEC, in_valid_str , DYNJPT_VF_POSITION    , "Validity of position data")
+	f.djpt_vf_vel    = ProtoField.uint8 ("simplemessage.djpt.vf.vel"         , "Velocity     "   , base.DEC, in_valid_str , DYNJPT_VF_VELOCITY    , "Validity of velocity data")
+	f.djpt_vf_accel  = ProtoField.uint8 ("simplemessage.djpt.vf.accel"       , "Acceleration "   , base.DEC, in_valid_str , DYNJPT_VF_ACCELERATION, "Validity of acceleration data")
+	f.djpt_vf_effort = ProtoField.uint8 ("simplemessage.djpt.vf.effort"      , "Effort       "   , base.DEC, in_valid_str , DYNJPT_VF_EFFORT      , "Validity of effort data")
+	f.djpt_vf_time   = ProtoField.uint8 ("simplemessage.djpt.vf.time"        , "Time         "   , base.DEC, in_valid_str , DYNJPT_VF_TIME        , "Validity of time field")
 	f.djpt_t_fstart  = ProtoField.float ("simplemessage.djpt.time_from_start", "Time from start" , "TODO (seconds)")
 
 	-- protocol fields: DYNAMIC_JOINT_STATE
-	f.djst_seq_nr    = ProtoField.int32 ("simplemessage.djst.seq"            , "Sequence Number" , base.DEC, nil          , nil                          , "Index of point in trajectory")
-	f.djst_numgroups = ProtoField.uint32("simplemessage.djst.numgroups"      , "Number of Groups", base.DEC, nil          , nil                          , "Number of groups")
-	f.djst_groupid   = ProtoField.int32 ("simplemessage.djst.gid"            , "Group ID"        , base.DEC, nil          , nil                          , "Control-group ID for use on controller")
-	f.djst_numjoints = ProtoField.uint32("simplemessage.djst.numjoints"      , "Number of Joints", base.DEC, nil          , nil                          , "Number of joints in group")
-	f.djst_vf        = ProtoField.uint8 ("simplemessage.djst.vf"             , "Valid Fields"    , base.HEX, nil          , nil                          , "Fields that contain valid data")
-	f.djst_vf_pos    = ProtoField.uint8 ("simplemessage.djst.vf.pos"         , "Position     "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_POSITION    , "Validity of position data")
-	f.djst_vf_vel    = ProtoField.uint8 ("simplemessage.djst.vf.vel"         , "Velocity     "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_VELOCITY    , "Validity of velocity data")
-	f.djst_vf_accel  = ProtoField.uint8 ("simplemessage.djst.vf.accel"       , "Acceleration "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_ACCELERATION, "Validity of acceleration data")
-	f.djst_vf_effort = ProtoField.uint8 ("simplemessage.djst.vf.effort"      , "Effort       "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_EFFORT      , "Validity of effort data")
-	f.djst_vf_time   = ProtoField.uint8 ("simplemessage.djst.vf.time"        , "Time         "   , base.DEC, in_valid_str , VALID_FIELD_REP_I0001_TYPE_TIME        , "Validity of time field")
-	-- TODO: add all 'desired' and 'error' fields
+	f.djst_seq_nr     = ProtoField.int32 ("simplemessage.djst.seq"            , "Sequence Number" , base.DEC, nil          , nil                          , "Index of point in trajectory")
+	f.djst_numgroups  = ProtoField.uint32("simplemessage.djst.numgroups"      , "Number of Groups", base.DEC, nil          , nil                          , "Number of groups")
+	f.djst_groupid    = ProtoField.int32 ("simplemessage.djst.gid"            , "Group ID"        , base.DEC, nil          , nil                          , "Control-group ID for use on controller")
+	f.djst_numjoints  = ProtoField.uint32("simplemessage.djst.numjoints"      , "Number of Joints", base.DEC, nil          , nil                          , "Number of joints in group")
+	-- TODO: valid_fields is actually a 32bit INT. Using uint16 here to avoid displaying a large nr of bit positions in the dissection tree that are not used
+	f.djst_vf         = ProtoField.uint16("simplemessage.djst.vf"             , "Valid Fields"    , base.HEX, nil          , nil                          , "Fields that contain valid data")
+	f.djst_vf_pos     = ProtoField.uint16("simplemessage.djst.vf.pos"         , "Position      "  , base.DEC, in_valid_str , DYNJS_VF_POSITION            , "Validity of position data")
+	f.djst_vf_vel     = ProtoField.uint16("simplemessage.djst.vf.vel"         , "Velocity      "  , base.DEC, in_valid_str , DYNJS_VF_VELOCITY            , "Validity of velocity data")
+	f.djst_vf_accel   = ProtoField.uint16("simplemessage.djst.vf.accel"       , "Acceleration  "  , base.DEC, in_valid_str , DYNJS_VF_ACCELERATION        , "Validity of acceleration data")
+	f.djst_vf_effort  = ProtoField.uint16("simplemessage.djst.vf.effort"      , "Effort        "  , base.DEC, in_valid_str , DYNJS_VF_EFFORT              , "Validity of effort data")
+	f.djst_vf_pos_des = ProtoField.uint16("simplemessage.djst.vf.pos_des"     , "Pos. Desired  "  , base.DEC, in_valid_str , DYNJS_VF_POSITION_DESIRED    , "Desired position")
+	f.djst_vf_pos_err = ProtoField.uint16("simplemessage.djst.vf.pos_err"     , "Pos. Error    "  , base.DEC, in_valid_str , DYNJS_VF_POSITION_ERROR      , "Position error")
+	f.djst_vf_vel_des = ProtoField.uint16("simplemessage.djst.vf.vel_des"     , "Vel. Desired  "  , base.DEC, in_valid_str , DYNJS_VF_VELOCITY_DESIRED    , "Desired velocity")
+	f.djst_vf_vel_err = ProtoField.uint16("simplemessage.djst.vf.vel_err"     , "Vel. Error    "  , base.DEC, in_valid_str , DYNJS_VF_VELOCITY_ERROR      , "Velocity error")
+	f.djst_vf_acc_des = ProtoField.uint16("simplemessage.djst.vf.acc_des"     , "Acc. Desired  "  , base.DEC, in_valid_str , DYNJS_VF_ACCELERATION_DESIRED, "Desired acceleration")
+	f.djst_vf_acc_err = ProtoField.uint16("simplemessage.djst.vf.acc_err"     , "Acc. Error    "  , base.DEC, in_valid_str , DYNJS_VF_ACCELERATION_ERROR  , "Acceleration error")
+	f.djst_vf_eff_des = ProtoField.uint16("simplemessage.djst.vf.eff_des"     , "Effort Desired"  , base.DEC, in_valid_str , DYNJS_VF_EFFORT_DESIRED      , "Desired effort")
+	f.djst_vf_eff_err = ProtoField.uint16("simplemessage.djst.vf.eff_err"     , "Effort Error  "  , base.DEC, in_valid_str , DYNJS_VF_EFFORT_ERROR        , "Effort error")
 
 	-- protocol fields: DYNAMIC_GROUP_STATE
 	f.dgst_numgroups = ProtoField.uint32("simplemessage.dgst.numgroups"      , "Number of Groups", base.DEC, nil                 , nil, "Number of groups")
@@ -975,38 +1010,38 @@ do
 			offset_ = offset_ + 4
 
 			-- append high bit flags to bitfield parent item
-			vf_lo:append_text(_F(" (%s)", stringify_flagbits(valid_fields, valid_field_rep_i0001_type_str)))
+			vf_lo:append_text(_F(" (%s)", stringify_flagbits(valid_fields, valid_field_type_dynjp_str)))
 
 			-- positions
-			if (bit.band(VALID_FIELD_REP_I0001_TYPE_POSITION, valid_fields) > 0) then
+			if (bit.band(DYNJPT_VF_POSITION, valid_fields) > 0) then
 				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
 					"Positions", "J%d")
 			end
 
 			-- velocities
-			if (bit.band(VALID_FIELD_REP_I0001_TYPE_VELOCITY, valid_fields) > 0) then
+			if (bit.band(DYNJPT_VF_VELOCITY, valid_fields) > 0) then
 				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
 					"Velocities", "J%d")
 			end
 
 			-- accelerations
-			if (bit.band(VALID_FIELD_REP_I0001_TYPE_ACCELERATION, valid_fields) > 0) then
+			if (bit.band(DYNJPT_VF_ACCELERATION, valid_fields) > 0) then
 				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
 					"Accelerations", "J%d")
 			end
 
 			-- effort
-			if (bit.band(VALID_FIELD_REP_I0001_TYPE_EFFORT, valid_fields) > 0) then
+			if (bit.band(DYNJPT_VF_EFFORT, valid_fields) > 0) then
 				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
 					"Effort", "J%d")
 			end
 
 			-- time from start
-			-- TODO: is this optional?
-			local num_joints = pref_uint(buf, offset_, 4)
-			pref_tree_add(group_tree, f.djpt_t_fstart, buf, offset_, 4)
-			offset_ = offset_ + 4
-
+			-- TODO: should this be optional?
+			if (bit.band(DYNJPT_VF_TIME, valid_fields) > 0) then
+				pref_tree_add(group_tree, f.djpt_t_fstart, buf, offset_, 4)
+				offset_ = offset_ + 4
+			end
 
 			-- correct length of TreeItem
 			group_tree:set_len(offset_ - group_tree_start)
@@ -1063,53 +1098,98 @@ do
 			local valid_fields = pref_uint(buf, offset_, 4)
 			local vf_lo = pref_tree_add(group_tree, f.djst_vf, buf, offset_, 4)
 			-- bitfield
-			pref_tree_add(vf_lo, f.djst_vf_pos   , buf, offset_, 4)
-			pref_tree_add(vf_lo, f.djst_vf_vel   , buf, offset_, 4)
-			pref_tree_add(vf_lo, f.djst_vf_accel , buf, offset_, 4)
-			pref_tree_add(vf_lo, f.djst_vf_effort, buf, offset_, 4)
-			pref_tree_add(vf_lo, f.djst_vf_time  , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_pos    , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_vel    , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_accel  , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_effort , buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_pos_des, buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_pos_err, buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_vel_des, buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_vel_err, buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_acc_des, buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_acc_err, buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_eff_des, buf, offset_, 4)
+			pref_tree_add(vf_lo, f.djst_vf_eff_err, buf, offset_, 4)
 			offset_ = offset_ + 4
 
 			-- append high bit flags to bitfield parent item
-			vf_lo:append_text(_F(" (%s)", stringify_flagbits(valid_fields, valid_field_rep_i0001_type_str)))
+			vf_lo:append_text(_F(" (%s)", stringify_flagbits(valid_fields, valid_field_type_dynjs_str)))
+
+			-- TODO: see whether we can iterate over valid_field_type_dynjs_str (key,value) pairs
+			--       instead of duplicating all the following statements (but order is important,
+			--       so the iteration should preserve that)
 
 			-- positions
-			if (bit.band(VALID_FIELD_REP_I0001_TYPE_POSITION, valid_fields) > 0) then
+			if (bit.band(DYNJS_VF_POSITION, valid_fields) > 0) then
 				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
-					"Positions", "J%d")
+					valid_field_type_dynjs_str[DYNJS_VF_POSITION], "J%d")
 			end
 
 			-- velocities
-			if (bit.band(VALID_FIELD_REP_I0001_TYPE_VELOCITY, valid_fields) > 0) then
+			if (bit.band(DYNJS_VF_VELOCITY, valid_fields) > 0) then
 				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
-					"Velocities", "J%d")
+					valid_field_type_dynjs_str[DYNJS_VF_VELOCITY], "J%d")
 			end
 
 			-- accelerations
-			if (bit.band(VALID_FIELD_REP_I0001_TYPE_ACCELERATION, valid_fields) > 0) then
+			if (bit.band(DYNJS_VF_ACCELERATION, valid_fields) > 0) then
 				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
-					"Accelerations", "J%d")
+					valid_field_type_dynjs_str[DYNJS_VF_ACCELERATION], "J%d")
 			end
 
 			-- effort
-			if (bit.band(VALID_FIELD_REP_I0001_TYPE_EFFORT, valid_fields) > 0) then
+			if (bit.band(DYNJS_VF_EFFORT, valid_fields) > 0) then
 				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
-					"Effort", "J%d")
+					valid_field_type_dynjs_str[DYNJS_VF_EFFORT], "J%d")
 			end
 
+			-- position desired
+			if (bit.band(DYNJS_VF_POSITION_DESIRED, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					valid_field_type_dynjs_str[DYNJS_VF_POSITION_DESIRED], "J%d")
+			end
 
+			-- position error
+			if (bit.band(DYNJS_VF_POSITION_ERROR, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					valid_field_type_dynjs_str[DYNJS_VF_POSITION_ERROR], "J%d")
+			end
 
-			-- TODO: add all 'desired' and 'error' arrays
-			-- position_desired[]
-			-- position_error[]
-			-- velocity_desired[]
-			-- velocity_error[]
-			-- accel_desired[]
-			-- accel_error[]
-			-- effort_desired[]
-			-- effort_error[]
+			-- velocity desired
+			if (bit.band(DYNJS_VF_VELOCITY_DESIRED, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					valid_field_type_dynjs_str[DYNJS_VF_VELOCITY_DESIRED], "J%d")
+			end
 
+			-- velocity error
+			if (bit.band(DYNJS_VF_VELOCITY_ERROR, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					valid_field_type_dynjs_str[DYNJS_VF_VELOCITY_ERROR], "J%d")
+			end
 
+			-- acceleration desired
+			if (bit.band(DYNJS_VF_ACCELERATION_DESIRED, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					valid_field_type_dynjs_str[DYNJS_VF_ACCELERATION_DESIRED], "J%d")
+			end
+
+			-- acceleration error
+			if (bit.band(DYNJS_VF_ACCELERATION_ERROR, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					valid_field_type_dynjs_str[DYNJS_VF_ACCELERATION_ERROR], "J%d")
+			end
+
+			-- effort desired
+			if (bit.band(DYNJS_VF_EFFORT_DESIRED, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					valid_field_type_dynjs_str[DYNJS_VF_EFFORT_DESIRED], "J%d")
+			end
+
+			-- effort error
+			if (bit.band(DYNJS_VF_EFFORT_ERROR, valid_fields) > 0) then
+				offset_ = offset_ + disf_float_array(buf, pkt, group_tree, offset_, num_joints,
+					valid_field_type_dynjs_str[DYNJS_VF_EFFORT_ERROR], "J%d")
+			end
 
 			-- correct length of TreeItem
 			group_tree:set_len(offset_ - group_tree_start)
