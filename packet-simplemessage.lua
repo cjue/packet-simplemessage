@@ -975,8 +975,12 @@ do
 		local body_offset = offset_
 
 		-- sequence number
-		pref_tree_add(body_tree, f.djpt_seq_nr, buf, offset_, 4)
+		local seq_nr = pref_int(buf, offset_, 4)
+		local seq_field = pref_tree_add(body_tree, f.djpt_seq_nr, buf, offset_, 4)
 		offset_ = offset_ + 4
+		if (seq_nr < 0) then
+			seq_field:append_text(_F(" (%s)", str_or_none(special_seq_nr_str, seq_nr)))
+		end
 
 		-- number of groups
 		local num_groups = pref_uint(buf, offset_, 4)
@@ -1071,8 +1075,12 @@ do
 		local body_offset = offset_
 
 		-- sequence number
-		pref_tree_add(body_tree, f.djst_seq_nr, buf, offset_, 4)
+		local seq_nr = pref_int(buf, offset_, 4)
+		local seq_field = pref_tree_add(body_tree, f.djst_seq_nr, buf, offset_, 4)
 		offset_ = offset_ + 4
+		if (seq_nr < 0) then
+			seq_field:append_text(_F(" (%s)", str_or_none(special_seq_nr_str, seq_nr)))
+		end
 
 		-- number of groups
 		local num_groups = pref_uint(buf, offset_, 4)
